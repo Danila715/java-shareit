@@ -6,13 +6,12 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.3.2</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/>
     </parent>
 
     <groupId>ru.practicum</groupId>
     <artifactId>shareit</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-
     <name>ShareIt</name>
 
     <properties>
@@ -33,19 +32,16 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -83,6 +79,7 @@
                 </configuration>
             </plugin>
         </plugins>
+
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -94,10 +91,11 @@
                         </systemPropertyVariables>
                     </configuration>
                 </plugin>
+
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
-                    <version>3.1.2</version>
+                    <version>3.6.0</version>
                     <configuration>
                         <configLocation>checkstyle.xml</configLocation>
                         <failOnViolation>true</failOnViolation>
@@ -106,10 +104,10 @@
                     </configuration>
                     <executions>
                         <execution>
+                            <phase>compile</phase>
                             <goals>
                                 <goal>check</goal>
                             </goals>
-                            <phase>compile</phase>
                         </execution>
                     </executions>
                     <dependencies>
@@ -120,10 +118,11 @@
                         </dependency>
                     </dependencies>
                 </plugin>
+
                 <plugin>
                     <groupId>com.github.spotbugs</groupId>
                     <artifactId>spotbugs-maven-plugin</artifactId>
-                    <version>4.8.5.0</version>
+                    <version>4.8.6.1</version>
                     <configuration>
                         <effort>Max</effort>
                         <threshold>High</threshold>
@@ -136,6 +135,7 @@
                         </execution>
                     </executions>
                 </plugin>
+
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
@@ -207,9 +207,13 @@
             </plugins>
         </pluginManagement>
     </build>
+
     <profiles>
         <profile>
             <id>check</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -231,6 +235,7 @@
                 </plugins>
             </reporting>
         </profile>
+
         <profile>
             <id>coverage</id>
             <build>
@@ -243,5 +248,4 @@
             </build>
         </profile>
     </profiles>
-
 </project>
