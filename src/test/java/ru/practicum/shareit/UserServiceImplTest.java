@@ -2,22 +2,26 @@ package ru.practicum.shareit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.practicum.shareit.exception.ConflictException;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.UserDto;
 import ru.practicum.shareit.user.UserService;
 import ru.practicum.shareit.user.UserServiceImpl;
+import ru.practicum.shareit.user.UserStorage;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class UserServiceImplTest {
 
     private UserService userService;
+    private UserStorage userStorage;
 
     @BeforeEach
     void setUp() {
-        userService = new UserServiceImpl();
+        userStorage = new UserStorage();
+        userService = new UserServiceImpl(userStorage);
     }
 
     @Test
@@ -64,7 +68,7 @@ class UserServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenUserNotFound() {
-        assertThrows(NoSuchElementException.class, () -> userService.getUserById(999L));
+        assertThrows(NotFoundException.class, () -> userService.getUserById(999L));
     }
 
     @Test
@@ -94,7 +98,7 @@ class UserServiceImplTest {
 
         userService.deleteUser(created.getId());
 
-        assertThrows(NoSuchElementException.class, () -> userService.getUserById(created.getId()));
+        assertThrows(NotFoundException.class, () -> userService.getUserById(created.getId()));
     }
 
     @Test
@@ -109,7 +113,7 @@ class UserServiceImplTest {
 
         userService.createUser(user1);
 
-        assertThrows(IllegalArgumentException.class, () -> userService.createUser(user2));
+        assertThrows(ConflictException.class, () -> userService.createUser(user2));
     }
 
     @Test
@@ -128,6 +132,6 @@ class UserServiceImplTest {
         UserDto updateDto = new UserDto();
         updateDto.setEmail("petr@example.com");
 
-        assertThrows(IllegalArgumentException.class, () -> userService.updateUser(created1.getId(), updateDto));
+        assertThrows(ConflictException.class, () -> userService.updateUser(created1.getId(), updateDto));
     }
 }

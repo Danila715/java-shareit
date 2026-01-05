@@ -3,9 +3,11 @@ package ru.practicum.shareit.item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.exception.ForbiddenException;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.UserService;
 
-import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -13,34 +15,33 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ItemServiceImpl implements ItemService {
 
+    private final ItemStorage itemStorage;
     private final UserService userService;
-    private final Map<Long, Item> items = new HashMap<>();
-    private Long currentId = 1L;
 
     @Override
     public ItemDto addItem(Long userId, ItemDto itemDto) {
+        log.info("Добавление вещи '{}' пользователем с id={}", itemDto.getName(), userId);
+
         if (!userService.userExists(userId)) {
-            throw new NoSuchElementException("Пользователь с id=" + userId + " не найден");
+            throw new NotFoundException("Пользователь с id=" + userId + " не найден");
         }
 
         Item item = ItemMapper.toItem(itemDto, userId);
-        item.setId(currentId++);
-        items.put(item.getId(), item);
+        Item savedItem = itemStorage.save(item);
 
-        log.info("Добавлена вещь с id={} пользователем с id={}", item.getId(), userId);
-        return ItemMapper.toItemDto(item);
+        log.info("Вещь добавлена с id={}", savedItem.getId());
+        return ItemMapper.toItemDto(savedItem);
     }
 
     @Override
     public ItemDto updateItem(Long userId, Long itemId, ItemDto itemDto) {
-        Item item = items.get(itemId);
+        log.info("Обновление вещи с id={} пользователем с id={}", itemId, userId);
 
-        if (item == null) {
-            throw new NoSuchElementException("Вещь с id=" + itemId + " не найдена");
-        }
+        Item item = itemStorage.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Вещь с id=" + itemId + " не найдена"));
 
         if (!item.getOwner().equals(userId)) {
-            throw new SecurityException("Редактировать вещь может только её владелец");
+            throw new ForbiddenException("Редактировать вещь может только её владелец");
         }
 
         if (itemDto.getName() != null && !itemDto.getName().isBlank()) {
@@ -55,39 +56,36 @@ public class ItemServiceImpl implements ItemService {
             item.setAvailable(itemDto.getAvailable());
         }
 
-        log.info("Обновлена вещь с id={}", itemId);
-        return ItemMapper.toItemDto(item);
+        Item updatedItem = itemStorage.update(item);
+        log.info("Вещь с id={} обновлена", itemId);
+
+        return ItemMapper.toItemDto(updatedItem);
     }
 
     @Override
     public ItemDto getItemById(Long itemId) {
-        Item item = items.get(itemId);
-        if (item == null) {
-            throw new NoSuchElementException("Вещь с id=" + itemId + " не найдена");
-        }
+        log.info("Получение вещи с id={}", itemId);
+
+        Item item = itemStorage.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Вещь с id=" + itemId + " не найдена"));
+
         return ItemMapper.toItemDto(item);
     }
 
     @Override
     public List<ItemDto> getItemsByOwner(Long userId) {
-        return items.values().stream()
-                .filter(item -> item.getOwner().equals(userId))
+        log.info("Получение списка вещей пользователя с id={}", userId);
+
+        return itemStorage.findAllByOwnerId(userId).stream()
                 .map(ItemMapper::toItemDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<ItemDto> searchItems(String text) {
-        if (text == null || text.isBlank()) {
-            return Collections.emptyList();
-        }
+        log.info("Поиск вещей по тексту: '{}'", text);
 
-        String searchText = text.toLowerCase();
-
-        return items.values().stream()
-                .filter(Item::getAvailable)
-                .filter(item -> item.getName().toLowerCase().contains(searchText) ||
-                        item.getDescription().toLowerCase().contains(searchText))
+        return itemStorage.searchByText(text).stream()
                 .map(ItemMapper::toItemDto)
                 .collect(Collectors.toList());
     }

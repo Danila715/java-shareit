@@ -3,13 +3,15 @@ package ru.practicum.shareit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import ru.practicum.shareit.exception.ForbiddenException;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.ItemDto;
 import ru.practicum.shareit.item.ItemService;
 import ru.practicum.shareit.item.ItemServiceImpl;
+import ru.practicum.shareit.item.ItemStorage;
 import ru.practicum.shareit.user.UserService;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -18,12 +20,14 @@ import static org.mockito.Mockito.when;
 class ItemServiceImplTest {
 
     private ItemService itemService;
+    private ItemStorage itemStorage;
     private UserService userService;
 
     @BeforeEach
     void setUp() {
+        itemStorage = new ItemStorage();
         userService = Mockito.mock(UserService.class);
-        itemService = new ItemServiceImpl(userService);
+        itemService = new ItemServiceImpl(itemStorage, userService);
 
         // По умолчанию пользователи существуют
         when(userService.userExists(anyLong())).thenReturn(true);
@@ -53,7 +57,7 @@ class ItemServiceImplTest {
         itemDto.setDescription("Мощная дрель");
         itemDto.setAvailable(true);
 
-        assertThrows(NoSuchElementException.class, () -> itemService.addItem(999L, itemDto));
+        assertThrows(NotFoundException.class, () -> itemService.addItem(999L, itemDto));
     }
 
     @Test
@@ -86,7 +90,7 @@ class ItemServiceImplTest {
         ItemDto updateDto = new ItemDto();
         updateDto.setName("Новое название");
 
-        assertThrows(SecurityException.class,
+        assertThrows(ForbiddenException.class,
                 () -> itemService.updateItem(2L, created.getId(), updateDto));
     }
 
@@ -106,7 +110,7 @@ class ItemServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenItemNotFound() {
-        assertThrows(NoSuchElementException.class, () -> itemService.getItemById(999L));
+        assertThrows(NotFoundException.class, () -> itemService.getItemById(999L));
     }
 
     @Test

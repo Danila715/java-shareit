@@ -7,8 +7,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.NoSuchElementException;
-
 @Slf4j
 @RestControllerAdvice
 public class ErrorHandler {
@@ -22,21 +20,21 @@ public class ErrorHandler {
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ErrorResponse handleNotFoundException(NoSuchElementException e) {
+    public ErrorResponse handleNotFoundException(NotFoundException e) {
         log.error("Объект не найден: {}", e.getMessage());
         return new ErrorResponse(e.getMessage());
     }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse handleConflictException(IllegalArgumentException e) {
+    public ErrorResponse handleConflictException(ConflictException e) {
         log.error("Конфликт данных: {}", e.getMessage());
         return new ErrorResponse(e.getMessage());
     }
 
     @ExceptionHandler
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public ErrorResponse handleForbiddenException(SecurityException e) {
+    public ErrorResponse handleForbiddenException(ForbiddenException e) {
         log.error("Ошибка доступа: {}", e.getMessage());
         return new ErrorResponse(e.getMessage());
     }

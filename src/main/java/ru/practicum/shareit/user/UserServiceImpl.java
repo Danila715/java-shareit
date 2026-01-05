@@ -1,90 +1,93 @@
 package ru.practicum.shareit.user;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.exception.ConflictException;
+import ru.practicum.shareit.exception.NotFoundException;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private final Map<Long, User> users = new HashMap<>();
-    private Long currentId = 1L;
+    private final UserStorage userStorage;
 
     @Override
     public UserDto createUser(UserDto userDto) {
-        validateEmail(userDto.getEmail(), null);
+        log.info("Создание пользователя: {}", userDto.getEmail());
+
+        if (userStorage.existsByEmail(userDto.getEmail())) {
+            throw new ConflictException("Email уже используется");
+        }
 
         User user = UserMapper.toUser(userDto);
-        user.setId(currentId++);
-        users.put(user.getId(), user);
+        User savedUser = userStorage.save(user);
 
-        log.info("Создан пользователь с id={}", user.getId());
-        return UserMapper.toUserDto(user);
+        log.info("Пользователь создан с id={}", savedUser.getId());
+        return UserMapper.toUserDto(savedUser);
     }
 
     @Override
     public UserDto updateUser(Long userId, UserDto userDto) {
-        User user = users.get(userId);
-        if (user == null) {
-            throw new NoSuchElementException("Пользователь с id=" + userId + " не найден");
-        }
+        log.info("Обновление пользователя с id={}", userId);
+
+        User user = userStorage.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
 
         if (userDto.getName() != null && !userDto.getName().isBlank()) {
             user.setName(userDto.getName());
         }
 
         if (userDto.getEmail() != null && !userDto.getEmail().isBlank()) {
-            validateEmail(userDto.getEmail(), userId);
+            if (userStorage.existsByEmailAndIdNot(userDto.getEmail(), userId)) {
+                throw new ConflictException("Email уже используется");
+            }
             user.setEmail(userDto.getEmail());
         }
 
-        log.info("Обновлен пользователь с id={}", userId);
-        return UserMapper.toUserDto(user);
+        User updatedUser = userStorage.update(user);
+        log.info("Пользователь с id={} обновлён", userId);
+
+        return UserMapper.toUserDto(updatedUser);
     }
 
     @Override
     public UserDto getUserById(Long userId) {
-        User user = users.get(userId);
-        if (user == null) {
-            throw new NoSuchElementException("Пользователь с id=" + userId + " не найден");
-        }
+        log.info("Получение пользователя с id={}", userId);
+
+        User user = userStorage.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
+
         return UserMapper.toUserDto(user);
     }
 
     @Override
     public List<UserDto> getAllUsers() {
-        return users.values().stream()
+        log.info("Получение списка всех пользователей");
+
+        return userStorage.findAll().stream()
                 .map(UserMapper::toUserDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public void deleteUser(Long userId) {
-        if (!users.containsKey(userId)) {
-            throw new NoSuchElementException("Пользователь с id=" + userId + " не найден");
+        log.info("Удаление пользователя с id={}", userId);
+
+        if (!userStorage.existsById(userId)) {
+            throw new NotFoundException("Пользователь с id=" + userId + " не найден");
         }
-        users.remove(userId);
-        log.info("Удален пользователь с id={}", userId);
+
+        userStorage.deleteById(userId);
+        log.info("Пользователь с id={} удалён", userId);
     }
 
     @Override
     public boolean userExists(Long userId) {
-        return users.containsKey(userId);
-    }
-
-    private void validateEmail(String email, Long excludeUserId) {
-        boolean emailExists = users.values().stream()
-                .filter(user -> excludeUserId == null || !user.getId().equals(excludeUserId))
-                .anyMatch(user -> user.getEmail().equals(email));
-
-        if (emailExists) {
-            throw new IllegalArgumentException("Email уже используется");
-        }
+        return userStorage.existsById(userId);
     }
 }
