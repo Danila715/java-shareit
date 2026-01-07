@@ -3,6 +3,10 @@ package ru.practicum.shareit.item;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import ru.practicum.shareit.booking.BookingShortDto;
+import ru.practicum.shareit.comment.CommentDto;
+
+import java.util.List;
 
 @Data
 public class ItemDto {
@@ -16,4 +20,8 @@ public class ItemDto {
 
     @NotNull(message = "Необходимо указать статус доступности")
     private Boolean available;
+
+    private BookingShortDto lastBooking;
+    private BookingShortDto nextBooking;
+    private List<CommentDto> comments;
 }
