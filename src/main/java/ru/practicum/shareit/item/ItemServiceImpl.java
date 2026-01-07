@@ -11,8 +11,9 @@ import ru.practicum.shareit.comment.Comment;
 import ru.practicum.shareit.comment.CommentDto;
 import ru.practicum.shareit.comment.CommentMapper;
 import ru.practicum.shareit.comment.CommentRepository;
-import ru.practicum.shareit.exception.ForbiddenException;
+import ru.practicum.shareit.exception.BadRequestException;
 import ru.practicum.shareit.exception.NotFoundException;
+import ru.practicum.shareit.exception.ForbiddenException;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.UserService;
@@ -146,12 +147,12 @@ public class ItemServiceImpl implements ItemService {
         User author = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
 
-        // Проверяем, что пользователь брал вещь в аренду - должен быть 400 Bad Request
+        // Проверяем, что пользователь брал вещь в аренду - 400 Bad Request (бизнес-логика)
         boolean hasBooking = bookingRepository.existsCompletedBookingByBookerAndItem(
                 userId, itemId, LocalDateTime.now());
 
         if (!hasBooking) {
-            throw new IllegalArgumentException("Оставить комментарий может только пользователь, " +
+            throw new BadRequestException("Оставить комментарий может только пользователь, " +
                     "который брал вещь в аренду");
         }
 
