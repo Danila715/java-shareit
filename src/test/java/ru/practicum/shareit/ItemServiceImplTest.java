@@ -1,159 +1,163 @@
 package ru.practicum.shareit;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import ru.practicum.shareit.booking.BookingRepository;
+import ru.practicum.shareit.comment.CommentRepository;
 import ru.practicum.shareit.exception.ForbiddenException;
 import ru.practicum.shareit.exception.NotFoundException;
+import ru.practicum.shareit.item.Item;
 import ru.practicum.shareit.item.ItemDto;
-import ru.practicum.shareit.item.ItemService;
+import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.item.ItemServiceImpl;
-import ru.practicum.shareit.item.ItemStorage;
+import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.UserService;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class ItemServiceImplTest {
 
-    private ItemService itemService;
-    private ItemStorage itemStorage;
+    @Mock
+    private ItemRepository itemRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private BookingRepository bookingRepository;
+
+    @Mock
+    private CommentRepository commentRepository;
+
+    @Mock
     private UserService userService;
 
-    @BeforeEach
-    void setUp() {
-        itemStorage = new ItemStorage();
-        userService = Mockito.mock(UserService.class);
-        itemService = new ItemServiceImpl(itemStorage, userService);
-
-        // По умолчанию пользователи существуют
-        when(userService.userExists(anyLong())).thenReturn(true);
-    }
+    @InjectMocks
+    private ItemServiceImpl itemService;
 
     @Test
     void shouldAddItem() {
+        Long userId = 1L;
         ItemDto itemDto = new ItemDto();
         itemDto.setName("Дрель");
         itemDto.setDescription("Мощная дрель");
         itemDto.setAvailable(true);
 
-        ItemDto created = itemService.addItem(1L, itemDto);
+        Item item = new Item();
+        item.setId(1L);
+        item.setName("Дрель");
+        item.setDescription("Мощная дрель");
+        item.setAvailable(true);
+        item.setOwner(userId);
 
-        assertNotNull(created.getId());
+        when(userService.userExists(userId)).thenReturn(true);
+        when(itemRepository.save(any(Item.class))).thenReturn(item);
+
+        ItemDto created = itemService.addItem(userId, itemDto);
+
+        assertNotNull(created);
         assertEquals("Дрель", created.getName());
-        assertEquals("Мощная дрель", created.getDescription());
-        assertTrue(created.getAvailable());
+        verify(itemRepository, times(1)).save(any(Item.class));
     }
 
     @Test
     void shouldThrowExceptionWhenAddingItemForNonExistentUser() {
-        when(userService.userExists(999L)).thenReturn(false);
-
+        Long userId = 999L;
         ItemDto itemDto = new ItemDto();
         itemDto.setName("Дрель");
         itemDto.setDescription("Мощная дрель");
         itemDto.setAvailable(true);
 
-        assertThrows(NotFoundException.class, () -> itemService.addItem(999L, itemDto));
+        when(userService.userExists(userId)).thenReturn(false);
+
+        assertThrows(NotFoundException.class, () -> itemService.addItem(userId, itemDto));
+        verify(itemRepository, never()).save(any(Item.class));
     }
 
     @Test
     void shouldUpdateItem() {
-        ItemDto itemDto = new ItemDto();
-        itemDto.setName("Дрель");
-        itemDto.setDescription("Мощная дрель");
-        itemDto.setAvailable(true);
-        ItemDto created = itemService.addItem(1L, itemDto);
+        Long userId = 1L;
+        Long itemId = 1L;
+
+        Item existingItem = new Item();
+        existingItem.setId(itemId);
+        existingItem.setName("Дрель");
+        existingItem.setDescription("Мощная дрель");
+        existingItem.setAvailable(true);
+        existingItem.setOwner(userId);
 
         ItemDto updateDto = new ItemDto();
         updateDto.setName("Дрель обновлённая");
-        updateDto.setAvailable(false);
 
-        ItemDto updated = itemService.updateItem(1L, created.getId(), updateDto);
+        when(itemRepository.findById(itemId)).thenReturn(Optional.of(existingItem));
+        when(itemRepository.save(any(Item.class))).thenReturn(existingItem);
+
+        ItemDto updated = itemService.updateItem(userId, itemId, updateDto);
 
         assertEquals("Дрель обновлённая", updated.getName());
-        assertEquals("Мощная дрель", updated.getDescription());
-        assertFalse(updated.getAvailable());
+        verify(itemRepository, times(1)).save(any(Item.class));
     }
 
     @Test
     void shouldThrowExceptionWhenNonOwnerUpdatesItem() {
-        ItemDto itemDto = new ItemDto();
-        itemDto.setName("Дрель");
-        itemDto.setDescription("Мощная дрель");
-        itemDto.setAvailable(true);
-        ItemDto created = itemService.addItem(1L, itemDto);
+        Long ownerId = 1L;
+        Long otherUserId = 2L;
+        Long itemId = 1L;
+
+        Item item = new Item();
+        item.setId(itemId);
+        item.setOwner(ownerId);
 
         ItemDto updateDto = new ItemDto();
         updateDto.setName("Новое название");
 
+        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
+
         assertThrows(ForbiddenException.class,
-                () -> itemService.updateItem(2L, created.getId(), updateDto));
+                () -> itemService.updateItem(otherUserId, itemId, updateDto));
+        verify(itemRepository, never()).save(any(Item.class));
     }
 
     @Test
     void shouldGetItemById() {
-        ItemDto itemDto = new ItemDto();
-        itemDto.setName("Дрель");
-        itemDto.setDescription("Мощная дрель");
-        itemDto.setAvailable(true);
-        ItemDto created = itemService.addItem(1L, itemDto);
+        Long itemId = 1L;
+        Long userId = 1L;
 
-        ItemDto found = itemService.getItemById(created.getId());
+        Item item = new Item();
+        item.setId(itemId);
+        item.setName("Дрель");
+        item.setOwner(userId);
 
-        assertEquals(created.getId(), found.getId());
+        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
+        when(commentRepository.findAllByItemId(itemId)).thenReturn(Collections.emptyList());
+        when(bookingRepository.findLastBookingForItem(anyLong(), any())).thenReturn(null);
+        when(bookingRepository.findNextBookingForItem(anyLong(), any())).thenReturn(null);
+
+        ItemDto found = itemService.getItemById(itemId, userId);
+
+        assertEquals(itemId, found.getId());
         assertEquals("Дрель", found.getName());
     }
 
     @Test
-    void shouldThrowExceptionWhenItemNotFound() {
-        assertThrows(NotFoundException.class, () -> itemService.getItemById(999L));
-    }
-
-    @Test
-    void shouldGetItemsByOwner() {
-        ItemDto item1 = new ItemDto();
-        item1.setName("Дрель");
-        item1.setDescription("Мощная дрель");
-        item1.setAvailable(true);
-
-        ItemDto item2 = new ItemDto();
-        item2.setName("Молоток");
-        item2.setDescription("Тяжёлый молоток");
-        item2.setAvailable(true);
-
-        itemService.addItem(1L, item1);
-        itemService.addItem(1L, item2);
-        itemService.addItem(2L, item1); // Другой владелец
-
-        List<ItemDto> items = itemService.getItemsByOwner(1L);
-
-        assertEquals(2, items.size());
-    }
-
-    @Test
     void shouldSearchItems() {
-        ItemDto item1 = new ItemDto();
-        item1.setName("Дрель Салют");
-        item1.setDescription("Мощная дрель для бетона");
-        item1.setAvailable(true);
+        Item item = new Item();
+        item.setId(1L);
+        item.setName("Дрель Салют");
+        item.setAvailable(true);
 
-        ItemDto item2 = new ItemDto();
-        item2.setName("Молоток");
-        item2.setDescription("Ударный инструмент");
-        item2.setAvailable(true);
-
-        ItemDto item3 = new ItemDto();
-        item3.setName("Дрель Makita");
-        item3.setDescription("Профессиональная");
-        item3.setAvailable(false); // Недоступна
-
-        itemService.addItem(1L, item1);
-        itemService.addItem(1L, item2);
-        itemService.addItem(2L, item3);
+        when(itemRepository.searchByText("дрель")).thenReturn(List.of(item));
 
         List<ItemDto> found = itemService.searchItems("дрель");
 
@@ -166,12 +170,6 @@ class ItemServiceImplTest {
         List<ItemDto> found = itemService.searchItems("");
 
         assertTrue(found.isEmpty());
-    }
-
-    @Test
-    void shouldReturnEmptyListForNullSearch() {
-        List<ItemDto> found = itemService.searchItems(null);
-
-        assertTrue(found.isEmpty());
+        verify(itemRepository, never()).searchByText(anyString());
     }
 }

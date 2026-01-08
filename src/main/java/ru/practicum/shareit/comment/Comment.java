@@ -1,4 +1,4 @@
-package ru.practicum.shareit.booking;
+package ru.practicum.shareit.comment;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -12,33 +12,29 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@ToString(exclude = {"item", "booker"})
+@ToString(exclude = {"item", "author"})
 @EqualsAndHashCode(of = {"id"})
 @Entity
-@Table(name = "bookings")
-public class Booking {
+@Table(name = "comments")
+public class Comment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "start_date", nullable = false)
-    private LocalDateTime start;
-
-    @Column(name = "end_date", nullable = false)
-    private LocalDateTime end;
+    @Column(name = "text", nullable = false, length = 1000)
+    private String text;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booker_id", nullable = false)
-    private User booker;
+    @JoinColumn(name = "author_id", nullable = false)
+    private User author;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private BookingStatus status;
+    @Column(name = "created", nullable = false)
+    private LocalDateTime created;
 
     // Для обратной совместимости с существующим кодом
     @Transient
@@ -47,8 +43,8 @@ public class Booking {
     }
 
     @Transient
-    public Long getBookerId() {
-        return booker != null ? booker.getId() : null;
+    public Long getAuthorId() {
+        return author != null ? author.getId() : null;
     }
 
     public void setItemId(Long itemId) {
@@ -57,9 +53,9 @@ public class Booking {
         this.item = tempItem;
     }
 
-    public void setBookerId(Long bookerId) {
+    public void setAuthorId(Long authorId) {
         User tempUser = new User();
-        tempUser.setId(bookerId);
-        this.booker = tempUser;
+        tempUser.setId(authorId);
+        this.author = tempUser;
     }
 }
