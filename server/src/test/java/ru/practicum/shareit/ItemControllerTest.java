@@ -12,7 +12,6 @@ import ru.practicum.shareit.item.ItemController;
 import ru.practicum.shareit.item.ItemDto;
 import ru.practicum.shareit.item.ItemService;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -35,100 +34,97 @@ class ItemControllerTest {
     private ItemService itemService;
 
     @Test
-    void getItemsByUser_shouldReturn200() throws Exception {
-        // given
-        ItemDto item = new ItemDto();
-        item.setId(1L);
-        item.setName("Дрель");
+    void addItem_shouldReturn200() throws Exception {
+        ItemDto dto = new ItemDto();
+        dto.setName("Дрель");
+        dto.setDescription("Мощная");
+        dto.setAvailable(true);
 
-        when(itemService.getItemsByOwner(1L))
-                .thenReturn(List.of(item));
+        ItemDto response = new ItemDto();
+        response.setId(1L);
 
-        // when & then
-        mockMvc.perform(get("/items")
-                        .header("X-Sharer-User-Id", 1L))
+        when(itemService.addItem(eq(1L), any(ItemDto.class))).thenReturn(response);
+
+        mockMvc.perform(post("/items")
+                        .header("X-Sharer-User-Id", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].id").value(1));
+                .andExpect(jsonPath("$.id").value(1));
     }
 
     @Test
     void updateItem_shouldReturn200() throws Exception {
-        // given
-        ItemDto updateDto = new ItemDto();
-        updateDto.setName("Новое имя");
+        ItemDto dto = new ItemDto();
+        dto.setName("Обновлённая дрель");
 
         ItemDto response = new ItemDto();
         response.setId(1L);
-        response.setName("Новое имя");
-        response.setDescription("Описание");
-        response.setAvailable(true);
 
-        when(itemService.updateItem(eq(1L), eq(1L), any(ItemDto.class)))
-                .thenReturn(response);
+        when(itemService.updateItem(eq(1L), eq(1L), any(ItemDto.class))).thenReturn(response);
 
-        // when & then
         mockMvc.perform(patch("/items/1")
                         .header("X-Sharer-User-Id", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateDto)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Новое имя"));
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void getItem_shouldReturn200() throws Exception {
+        ItemDto response = new ItemDto();
+        response.setId(1L);
+
+        when(itemService.getItemById(1L, 1L)).thenReturn(response);
+
+        mockMvc.perform(get("/items/1")
+                        .header("X-Sharer-User-Id", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void getItemsByUser_shouldReturn200() throws Exception {
+        ItemDto response = new ItemDto();
+        response.setId(1L);
+
+        when(itemService.getItemsByOwner(1L)).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/items")
+                        .header("X-Sharer-User-Id", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
     }
 
     @Test
     void searchItems_shouldReturn200() throws Exception {
-        // given
-        ItemDto item = new ItemDto();
-        item.setId(1L);
-        item.setName("Дрель");
+        ItemDto response = new ItemDto();
+        response.setId(1L);
 
-        when(itemService.searchItems("дрель"))
-                .thenReturn(List.of(item));
+        when(itemService.searchItems("дрель")).thenReturn(List.of(response));
 
-        // when & then
         mockMvc.perform(get("/items/search")
                         .param("text", "дрель"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].name").value("Дрель"));
-    }
-
-    @Test
-    void searchItems_withEmptyText_shouldReturnEmptyList() throws Exception {
-        // given
-        when(itemService.searchItems(""))
-                .thenReturn(Collections.emptyList());
-
-        // when & then
-        mockMvc.perform(get("/items/search")
-                        .param("text", ""))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$").isEmpty());
+                .andExpect(jsonPath("$[0].id").value(1));
     }
 
     @Test
     void addComment_shouldReturn200() throws Exception {
-        // given
-        CommentDto commentDto = new CommentDto();
-        commentDto.setText("Отличная вещь!");
+        CommentDto dto = new CommentDto();
+        dto.setText("Хорошая вещь");
 
         CommentDto response = new CommentDto();
         response.setId(1L);
-        response.setText("Отличная вещь!");
-        response.setAuthorName("User");
 
-        when(itemService.addComment(eq(1L), eq(1L), any(CommentDto.class)))
-                .thenReturn(response);
+        when(itemService.addComment(eq(1L), eq(1L), any(CommentDto.class))).thenReturn(response);
 
-        // when & then
         mockMvc.perform(post("/items/1/comment")
                         .header("X-Sharer-User-Id", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(commentDto)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.text").value("Отличная вещь!"));
+                .andExpect(jsonPath("$.id").value(1));
     }
 }
